@@ -8,17 +8,26 @@ found in the LICENSE file.
 <head>
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="-1">
-  <title>Graphics 2D</title>
+  <title>NaCl Path Tracer</title>
+  <link href="http://fonts.googleapis.com/css?family=Roboto+Slab:400,700" rel="stylesheet" type="text/css">
   <link rel="stylesheet" type="text/css" href="basic.css" />
   <script type="text/javascript" src="common.js"></script>
   <script type="text/javascript" src="path-tracer.js"></script>
 </head>
 <body data-width="512" data-height="384" data-name="path-tracer" data-tools="pnacl newlib glibc" data-configs="Debug Release" data-path="{tc}/{config}">
-  <h1>Path Tracer</h1>
-  <h2>Status: <code id="statusField">NO-STATUS</code></h2>
-  <h3>Iterations: <span id="iterationCount">0</span><h3>
-  <!-- The NaCl plugin will be embedded inside the element with id "listener".
-      See common.js.-->
-  <div id="listener"></div>
+  <header>
+    <h1>Path Tracer</h1>
+  </header>
+  <div id="main">
+    <div>
+      <strong>Status</strong>: <span id="statusField">NO-STATUS</span>
+    </div>
+    <div>
+      <strong>Iterations</strong>: <span id="iterationCount">0</span>
+    </div>
+    <!-- The NaCl plugin will be embedded inside the element with id "listener".
+        See common.js.-->
+    <div id="listener"></div>
+  </div>
 </body>
 </html>
