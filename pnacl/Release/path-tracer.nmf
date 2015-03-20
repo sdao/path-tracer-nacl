@@ -1,0 +1,12 @@
+{
+  "program": {
+    "portable": {
+      "pnacl-translate": {
+        "url": "path-tracer.pexe"
+      },
+      "pnacl-debug": {
+        "url": "path-tracer_unstripped.bc"
+      }
+    }
+  }
+}
