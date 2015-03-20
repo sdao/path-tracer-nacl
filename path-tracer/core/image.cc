@@ -3,6 +3,7 @@
 Image::Image(long ww, long hh, long spp, float fw)
   : currentIteration(boost::extents[hh][ww][spp]),
     rawData(boost::extents[hh][ww]),
+    lock(), counter(0),
     w(ww), h(hh), samplesPerPixel(spp), filterWidth(fw)
 {
   // Clear the data array.
@@ -34,6 +35,8 @@ void Image::setSample(
 }
 
 void Image::commitSamples() {
+  lock.lock();
+
   for (const auto& row : currentIteration) {
     for (const auto& col : row) {
       for (const Sample& s : col) {
@@ -64,26 +67,37 @@ void Image::commitSamples() {
       }
     }
   }
+
+  lock.unlock();
+
+  counter++;
 }
 
-void Image::writeToNaClImage(SyncedImage* buffer) {
-  buffer->AcquireLock();
+void Image::writeToNaClImage(pp::ImageData* buffer, int* counterOut) {
+  lock.lock();
 
-  pp::ImageData* data = buffer->GetRawData();
-  for (long y = 0; y != h; ++y) {
-     for (long x = 0; x != w; ++x) {
-       uint32_t* pxAddr = data->GetAddr32(pp::Point(x, y));
-       Vec4& px = rawData[y][x];
+  int dstWidth = buffer->size().width();
+  int dstHeight = buffer->size().height();
 
-       *pxAddr = MakeRgbaColor(
-         px.x() / px.w(),
-         px.y() / px.w(),
-         px.z() / px.w()
-       );
-     }
-   }
+  for (int y = 0; y < dstHeight; ++y) {
+    for (int x = 0; x != dstWidth; ++x) {
+      uint32_t* pxAddr = buffer->GetAddr32(pp::Point(x, y));
+      if (x >= w || y >= h) {
+        *pxAddr = 0xFF000000;
+      } else {
+        Vec4& px = rawData[y][x];
+        *pxAddr = MakeRgbaColor(
+          px.x() / px.w(),
+          px.y() / px.w(),
+          px.z() / px.w()
+        );
+      }
+    }
+  }
 
-  buffer->IncrementCounter();
-  buffer->Notify();
-  buffer->ReleaseLock();
+  lock.unlock();
+
+  if (counterOut) {
+    *counterOut = counter.load();
+  }
 }

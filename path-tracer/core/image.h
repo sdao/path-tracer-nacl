@@ -1,6 +1,8 @@
 #pragma once
 #include <boost/multi_array.hpp>
-#include "synced_image.h"
+#include <mutex>
+#include <atomic>
+#include "ppapi/cpp/image_data.h"
 #include "math.h"
 
 class Image {
@@ -20,6 +22,12 @@ class Image {
 
   /** The raw sampled colors and weights. */
   PixelArray rawData;
+
+  /** Lock on the data in rawData. */
+  std::mutex lock;
+
+  /** Counts the number of times the image has been committed. */
+  std::atomic<int> counter;
 
   static uint32_t MakeRgbaColor(float r, float g, float b);
 
@@ -78,9 +86,9 @@ public:
 
   /**
    * Takes the currently-set samples, filters their values, and adds them to
-   * the image. This is NOT thread-safe.
+   * the image.
    */
   void commitSamples();
 
-  void writeToNaClImage(SyncedImage* buffer);
+  void writeToNaClImage(pp::ImageData* buffer, int* counterOut);
 };

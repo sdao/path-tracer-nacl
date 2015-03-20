@@ -18,9 +18,9 @@
 #include "ppapi/cpp/point.h"
 #include "ppapi/utility/completion_callback_factory.h"
 
-#include "core/synced_image.h"
 #include "core/scene.h"
 #include "core/camera.h"
+#include "core/image.h"
 
 #ifdef WIN32
 #undef PostMessage
@@ -207,40 +207,31 @@ class Graphics2DInstance : public pp::Instance {
   explicit Graphics2DInstance(PP_Instance instance)
       : pp::Instance(instance),
         callback_factory_(this),
-        scene_(NULL),
-        image_(NULL),
+        core_image_(NULL),
         device_scale_(1.0f) {}
 
-  ~Graphics2DInstance() {
-    delete scene_;
-    delete image_;
-  }
+  ~Graphics2DInstance() {}
 
   virtual bool Init(uint32_t argc, const char* argn[], const char* argv[]) {
-    std::stringstream ss;
-    ss << kSceneDescription;
-
-    scene_ = new Scene(ss);
-    image_ = new SyncedImage(
-      this,
-      pp::Size(scene_->defaultCamera()->GetSize()),
-      pp::Size(1, 1)
-    );
-
     pthread_t t;
     pthread_create(
       &t,
       NULL,
-      &Graphics2DInstance::InitBackgroundThread,
+      &Graphics2DInstance::BackgroundRenderThread,
       this
     );
 
     return true;
   }
 
-  static void* InitBackgroundThread(void* data) {
+  static void* BackgroundRenderThread(void* data) {
+    std::stringstream ss;
+    ss << kSceneDescription;
+    Scene scene(ss);
+
     Graphics2DInstance* g2d = reinterpret_cast<Graphics2DInstance*>(data);
-    g2d->GetScene()->defaultCamera()->renderMultiple(g2d->GetImage(), -1);
+    g2d->core_image_ = scene.defaultCamera()->getImagePtr();
+    scene.defaultCamera()->renderMultiple(g2d->needs_paint_, -1);
     return NULL;
   }
 
@@ -273,12 +264,27 @@ class Graphics2DInstance : public pp::Instance {
       return false;
     }
 
-    // Update screen image buffer.
-    if (image_) {
-      image_->SetScreenSize(new_size);
-    }
+    // Force update screen image buffer.
+    size_ = new_size;
+    needs_paint_ = true;
 
     return true;
+  }
+
+  void Paint() {
+    if (!needs_paint_.load()) {
+      return;
+    }
+
+    needs_paint_ = false;
+
+    if (core_image_) {
+      pp::ImageData img(this, PP_IMAGEDATAFORMAT_RGBA_PREMUL, size_, false);
+      int counter;
+      core_image_->writeToNaClImage(&img, &counter);
+      context_.ReplaceContents(&img);
+      PostMessage(pp::Var(counter));
+    }
   }
 
   void MainLoop(int32_t) {
@@ -290,13 +296,7 @@ class Graphics2DInstance : public pp::Instance {
       return;
     }
 
-    if (image_) {
-      int counter;
-      context_.ReplaceContents(image_->GetScreenData(&counter));
-      PostMessage(pp::Var(counter));
-    } else {
-      std::cerr << "no update" << std::endl;
-    }
+    Paint();
 
     // Store a reference to the context that is being flushed; this ensures
     // the callback is called, even if context_ changes before the flush
@@ -306,20 +306,12 @@ class Graphics2DInstance : public pp::Instance {
         callback_factory_.NewCallback(&Graphics2DInstance::MainLoop));
   }
 
-  SyncedImage* GetImage() {
-    return image_;
-  }
-
-  const Scene* GetScene() {
-    return scene_;
-  }
-
   pp::CompletionCallbackFactory<Graphics2DInstance> callback_factory_;
   pp::Graphics2D context_;
   pp::Graphics2D flush_context_;
   pp::Size size_;
-  Scene* scene_;
-  SyncedImage* image_;
+  Image* core_image_;
+  std::atomic<bool> needs_paint_;
   float device_scale_;
 };
 

@@ -6,7 +6,6 @@
 #include "node.h"
 #include "linear_time.h"
 #include "sdk_util/thread_pool.h"
-#include "synced_image.h"
 
 /**
  * Manages rendering by simulating the action of a physical pinhole camera.
@@ -117,21 +116,21 @@ public:
    * If there are existing iterations, the additional iteration will be
    * combined in a weighted manner.
    *
-   * @param buffer the synced image used to communicate with NaCl
+   * @param needsUpdate the atomic bool used to communicate with NaCl
    */
-  void renderOnce(SyncedImage* buffer);
+  void renderOnce(std::atomic<bool>& needsUpdate);
 
   /**
    * Renders multiple additional path-tracing iterations.
    * To render infinite iterations, specify iterations = -1.
    *
-   * @param buffer     the synced image used to communicate with NaCl
-   * @param iterations the number of iterations to render; if < 0, then this
-   *                   function will run forever
+   * @param needsUpdate the atomic bool used to communicate with NaCl
+   * @param iterations  the number of iterations to render; if < 0, then this
+   *                    function will run forever
    */
-  void renderMultiple(SyncedImage* buffer, int iterations);
+  void renderMultiple(std::atomic<bool>& needsUpdate, int iterations);
 
-  pp::Size GetSize() const;
+  Image* getImagePtr();
 
   static void renderWorkFunc(int task_index, void* data);
 };

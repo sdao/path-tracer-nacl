@@ -56,7 +56,7 @@ Camera::Camera(const Node& n)
            n.getFloat("fov"), n.getFloat("focalLength"),
            n.getFloat("fStop")) {}
 
-void Camera::renderOnce(SyncedImage* buffer) {
+void Camera::renderOnce(std::atomic<bool>& needsUpdate) {
   // Increment iteration count and begin timer.
   iters++;
   std::cout << "Iteration " << iters;
@@ -70,9 +70,9 @@ void Camera::renderOnce(SyncedImage* buffer) {
   // Trace paths in parallel.
   pool.Dispatch(img.h, &Camera::renderWorkFunc, this);
 
-  // Process and write the output file at the end of this iteration.
+  // Process and report to NaCl that the current iteration is done.
   img.commitSamples();
-  img.writeToNaClImage(buffer);
+  needsUpdate = true;
 
   // End timer.
   chrono::steady_clock::time_point endTime = chrono::steady_clock::now();
@@ -81,20 +81,20 @@ void Camera::renderOnce(SyncedImage* buffer) {
   std::cout << " [" << runTime.count() << " seconds]\n";
 }
 
-void Camera::renderMultiple(SyncedImage* buffer, int iterations) {
+void Camera::renderMultiple(std::atomic<bool>& needsUpdate, int iterations) {
   if (iterations < 0) {
     // Run forever.
     std::cout << "Rendering infinitely, press Ctrl-c to terminate program\n";
 
     while (true) {
-      renderOnce(buffer);
+      renderOnce(needsUpdate);
     }
   } else {
     // Run finite iterations.
     std::cout << "Rendering " << iterations << " iterations\n";
 
     for (int i = 0; i < iterations; ++i) {
-      renderOnce(buffer);
+      renderOnce(needsUpdate);
     }
   }
 }
@@ -233,6 +233,6 @@ void Camera::renderWorkFunc(int task_index, void* data) {
   }
 }
 
-pp::Size Camera::GetSize() const {
-  return pp::Size(img.w, img.h);
+Image* Camera::getImagePtr() {
+  return &img;
 }
