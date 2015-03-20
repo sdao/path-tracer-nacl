@@ -3,6 +3,12 @@
 *.lo
 *.o
 *.obj
+*.bc
+*.pexe
+*.nexe
+*.nmf
+*.deps
+dir.stamp
 
 # Precompiled Headers
 *.gch
