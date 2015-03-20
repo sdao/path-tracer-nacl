@@ -240,6 +240,11 @@ class Graphics2DInstance : public pp::Instance {
     pp::Size new_size = pp::Size(view.GetRect().width() * device_scale_,
                                  view.GetRect().height() * device_scale_);
 
+    // No new context if the view size is the same.
+    if (size_ == new_size) {
+      return;
+    }
+
     if (!CreateContext(new_size))
       return;
 
