@@ -190,8 +190,8 @@ const std::string kSceneDescription = R"(
           "sphere3", "sphere4", "sphere5", "sphere6", "sphere7", "sphere8",
           "sphere9", "sphere10"
         ],
-        "width" : 512,
-        "height" : 384,
+        "width" : 450,
+        "height" : 337,
         "fov" : 0.78540,
         "focalLength" : 88.0,
         "fStop" : 16.0
